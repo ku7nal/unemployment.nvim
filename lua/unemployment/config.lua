@@ -4,7 +4,7 @@ M.defaults = {
   session_cookie = "",
   csrf_token = "",
   solutions_dir = "~/leetcode",
-  language = "python3",
+  language = "cpp",
   poll_interval = 500,
   poll_timeout = 90000,
   keys = {
@@ -93,7 +93,7 @@ function M.setup(opts)
 end
 
 function M.notify(msg, level)
-  vim.notify("󱌵 " .. msg, level or vim.log.levels.INFO)
+  vim.notify("󱌵 suki " .. msg, level or vim.log.levels.INFO)
 end
 
 return M

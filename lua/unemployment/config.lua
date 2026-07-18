@@ -10,6 +10,9 @@ M.defaults = {
   keys = {
     leader = "l",
   },
+  git = {
+    enabled = true,
+  },
   search = {
     cache_ttl = 86400,
   },

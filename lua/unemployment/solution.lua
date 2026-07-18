@@ -146,7 +146,7 @@ local function poll(id, client, callback, elapsed)
   end, backoff)
 end
 
-local function submit_code(desc, fn, info, code, client)
+local function submit_code(desc, fn, info, code, client, on_complete)
   vim.notify("unemployment: " .. desc .. "...", vim.log.levels.INFO)
 
   fn(info.slug, info.question_id, info.lang, code, function(data, err)
@@ -169,6 +169,9 @@ local function submit_code(desc, fn, info, code, client)
       return
       end
       view.show_result(result)
+      if on_complete then
+      on_complete(result)
+      end
     end)
     end)
   end)
@@ -193,7 +196,7 @@ function solution.test(client)
   end)
 end
 
-function solution.submit(client)
+function solution.submit(client, on_complete)
   local info, err = problem_info()
   if not info then
   vim.notify("unemployment: " .. err, vim.log.levels.ERROR)
@@ -207,8 +210,14 @@ function solution.submit(client)
   submit_code("Submitting",
     function(slug, qid, lang, code, cb)
     client:submit(slug, qid, lang, code, cb)
-    end, info, code, client)
+    end, info, code, client, on_complete)
   end)
+end
+
+function solution.current_slug()
+  local info, err = problem_info()
+  if not info then return nil, err end
+  return info.slug
 end
 
 return solution

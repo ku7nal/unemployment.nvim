@@ -3,8 +3,10 @@ local M = {}
 M.defaults = {
   session_cookie = "",
   csrf_token = "",
-  solutions_dir = vim.fn.expand("~/leetcode"),
+  solutions_dir = "~/leetcode",
   language = "python3",
+  poll_interval = 500,
+  poll_timeout = 90000,
 }
 
 M.ext_to_lang = {
@@ -46,7 +48,7 @@ M.lang_to_ft = {
   golang = "go",
   rust = "rust",
   swift = "swift",
-  kotlin = "kotlin",
+  kt = "kotlin",
   ruby = "ruby",
   scala = "scala",
   php = "php",
@@ -57,9 +59,28 @@ M.lang_to_ft = {
 }
 
 M.options = {}
+M.initialized = false
+
+local function validate(opts)
+  local errors = {}
+  if opts.session_cookie == "" then
+    table.insert(errors, "session_cookie is empty")
+  end
+  if opts.csrf_token == "" then
+    table.insert(errors, "csrf_token is empty")
+  end
+  return errors
+end
 
 function M.setup(opts)
   M.options = vim.tbl_deep_extend("force", vim.deepcopy(M.defaults), opts or {})
+  M.options.solutions_dir = vim.fn.expand(M.options.solutions_dir)
+  M.initialized = true
+
+  local errs = validate(M.options)
+  if #errs > 0 then
+    vim.notify("unemployment: Config warnings:\n" .. table.concat(errs, "\n"), vim.log.levels.WARN)
+  end
 end
 
 return M

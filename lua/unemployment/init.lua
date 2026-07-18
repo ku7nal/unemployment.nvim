@@ -1,6 +1,7 @@
 local config = require("unemployment.config")
 local api = require("unemployment.api")
 local solution = require("unemployment.solution")
+local search = require("unemployment.search")
 
 local M = {}
 
@@ -35,6 +36,29 @@ function M.setup(opts)
   if not require_setup() then return end
   solution.submit(client)
   end, { desc = "Submit current buffer to LeetCode" })
+
+  vim.api.nvim_create_user_command("DryProblems", function()
+  if not require_setup() then return end
+  search.search_problems()
+  end, { desc = "Search LeetCode problems with fzf-lua" })
+
+  local p = config.options.keys.leader
+  vim.keymap.set("n", "<leader>" .. p .. "p", function()
+    search.search_problems()
+  end, { desc = "Problems: search LeetCode" })
+
+  vim.keymap.set("n", "<leader>" .. p .. "t", function()
+    if not require_setup() then return end
+    solution.test(client)
+  end, { desc = "Test: run sample cases" })
+
+  vim.keymap.set("n", "<leader>" .. p .. "s", function()
+    if not require_setup() then return end
+    solution.submit(client)
+  end, { desc = "Submit: full submission" })
+
 end
+
+M.search_problems = search.search_problems
 
 return M

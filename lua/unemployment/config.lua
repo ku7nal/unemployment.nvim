@@ -7,6 +7,12 @@ M.defaults = {
   language = "python3",
   poll_interval = 500,
   poll_timeout = 90000,
+  keys = {
+    leader = "l",
+  },
+  search = {
+    cache_ttl = 86400,
+  },
 }
 
 M.ext_to_lang = {

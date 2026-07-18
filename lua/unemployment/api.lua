@@ -1,5 +1,31 @@
 local api = {}
 
+local PROBLEMS_LIST_QUERY = [[
+query problemsetQuestionList($categorySlug: String, $limit: Int, $skip: Int, $filters: QuestionListFilterInput) {
+  problemsetQuestionList: questionList(
+    categorySlug: $categorySlug
+    limit: $limit
+    skip: $skip
+    filters: $filters
+  ) {
+    total: totalNum
+    questions: data {
+      acRate
+      difficulty
+      questionId
+      isPaidOnly
+      title
+      titleSlug
+      topicTags {
+        name
+        id
+        slug
+      }
+    }
+  }
+}
+]]
+
 local QUESTION_DATA_QUERY = [[
 query questionData($titleSlug: String!) {
   question(titleSlug: $titleSlug) {
@@ -137,6 +163,54 @@ end
 function api:check_submission(id, callback)
   request("GET", self.base_url .. "/submissions/detail/" .. id .. "/check/", nil,
   self.session_cookie, self.csrf_token, callback)
+end
+
+function api:problems_list(callback)
+  local all_problems = {}
+  local limit = 100
+  local skip = 0
+  local total = nil
+
+  local function fetch_page()
+    local variables = {
+      categorySlug = "",
+      limit = limit,
+      skip = skip,
+      filters = vim.empty_dict(),
+    }
+    local body = vim.json.encode({ query = PROBLEMS_LIST_QUERY, variables = variables })
+    request("POST", self.base_url .. "/graphql", body,
+    self.session_cookie, self.csrf_token, function(data, err)
+    if err then
+      callback(nil, err)
+      return
+    end
+
+    local ok, _ = pcall(function() return data.data.problemsetQuestionList end)
+    if not ok or not data.data.problemsetQuestionList then
+      callback(nil, "Unexpected response format from problem list query")
+      return
+    end
+
+    local result = data.data.problemsetQuestionList
+    for _, q in ipairs(result.questions) do
+      table.insert(all_problems, q)
+    end
+
+    if total == nil then
+      total = result.total
+    end
+
+    skip = skip + limit
+    if skip < total then
+      fetch_page()
+    else
+      callback(all_problems, nil)
+    end
+    end)
+  end
+
+  fetch_page()
 end
 
 return api

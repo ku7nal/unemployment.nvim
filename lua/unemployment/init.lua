@@ -8,17 +8,22 @@ local M = {}
 
 local function require_setup()
   if not config.initialized then
-  vim.notify("unemployment: Call setup() first: require('unemployment').setup({...})", vim.log.levels.ERROR)
+  config.notify("Call setup() first: require('unemployment').setup({...})", vim.log.levels.ERROR)
   return false
   end
   return true
+end
+
+local function on_submit_complete(result)
+  local slug, _ = solution.current_slug()
+  if slug then git.commit(slug, result) end
 end
 
 function M.setup(opts)
   config.setup(opts)
 
   if config.options.session_cookie == "" or config.options.csrf_token == "" then
-  vim.notify("unemployment: session_cookie and/or csrf_token not set. :Dryrun/:DrySubmit will not work until configured.", vim.log.levels.WARN)
+  config.notify("session_cookie and/or csrf_token not set. :Dryrun/:DrySubmit will not work until configured.", vim.log.levels.WARN)
   end
 
   git.setup()
@@ -37,12 +42,7 @@ function M.setup(opts)
 
   vim.api.nvim_create_user_command("DrySubmit", function()
   if not require_setup() then return end
-  solution.submit(client, function(result)
-    local slug, err = solution.current_slug()
-    if slug then
-    git.commit(slug, result)
-    end
-  end)
+  solution.submit(client, on_submit_complete)
   end, { desc = "Submit current buffer to LeetCode" })
 
   vim.api.nvim_create_user_command("DryProblems", function()
@@ -52,6 +52,7 @@ function M.setup(opts)
 
   local p = config.options.keys.leader
   vim.keymap.set("n", "<leader>" .. p .. "p", function()
+    if not require_setup() then return end
     search.search_problems()
   end, { desc = "Problems: search LeetCode" })
 
@@ -62,17 +63,14 @@ function M.setup(opts)
 
   vim.keymap.set("n", "<leader>" .. p .. "s", function()
     if not require_setup() then return end
-    solution.submit(client, function(result)
-      local slug, _ = solution.current_slug()
-      if slug then git.commit(slug, result) end
-    end)
+    solution.submit(client, on_submit_complete)
   end, { desc = "Submit: full submission" })
 
   vim.api.nvim_create_user_command("DryLog", function()
   if not require_setup() then return end
   local slug, err = solution.current_slug()
   if not slug then
-    vim.notify("unemployment: " .. err, vim.log.levels.ERROR)
+    config.notify(err, vim.log.levels.ERROR)
     return
   end
   git.log(slug)
@@ -82,7 +80,7 @@ function M.setup(opts)
     if not require_setup() then return end
     local slug, err = solution.current_slug()
     if not slug then
-      vim.notify("unemployment: " .. err, vim.log.levels.ERROR)
+      config.notify(err, vim.log.levels.ERROR)
       return
     end
     git.log(slug)

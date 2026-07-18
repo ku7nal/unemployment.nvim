@@ -12,12 +12,12 @@ function solution.open(slug, client)
   local dir = config.options.solutions_dir
   vim.fn.mkdir(dir, "p")
 
-  vim.notify("unemployment: Fetching problem '" .. slug .. "'...", vim.log.levels.INFO)
+  config.notify("Fetching problem '" .. slug .. "'...", vim.log.levels.INFO)
 
   client:question_data(slug, function(data, err)
   vim.schedule(function()
     if err then
-    vim.notify("unemployment: " .. err, vim.log.levels.ERROR)
+    config.notify(err, vim.log.levels.ERROR)
     return
     end
 
@@ -34,7 +34,7 @@ function solution.open(slug, client)
     end
 
     if code == "" then
-    vim.notify("unemployment: No template for '" .. lang_slug .. "'", vim.log.levels.ERROR)
+    config.notify("No template for '" .. lang_slug .. "'", vim.log.levels.ERROR)
     return
     end
 
@@ -63,13 +63,16 @@ function solution.open(slug, client)
     end,
     })
 
-    vim.notify("unemployment: Opened '" .. question.title .. "'", vim.log.levels.INFO)
+    config.notify("Opened '" .. question.title .. "'", vim.log.levels.INFO)
   end)
   end)
 end
 
 local function problem_info()
   local buf = vim.api.nvim_get_current_buf()
+  if not vim.api.nvim_buf_is_valid(buf) then
+    return nil, "No valid buffer"
+  end
 
   if vim.b[buf].unemployment_slug then
   return {
@@ -106,7 +109,7 @@ local function fetch_question(info, client, callback)
   client:question_data(info.slug, function(data, err)
   vim.schedule(function()
     if err then
-    vim.notify("unemployment: " .. err, vim.log.levels.ERROR)
+    config.notify(err, vim.log.levels.ERROR)
     return
     end
     local q = data.data.question
@@ -147,25 +150,25 @@ local function poll(id, client, callback, elapsed)
 end
 
 local function submit_code(desc, fn, info, code, client, on_complete)
-  vim.notify("unemployment: " .. desc .. "...", vim.log.levels.INFO)
+  config.notify(desc .. "...", vim.log.levels.INFO)
 
   fn(info.slug, info.question_id, info.lang, code, function(data, err)
   vim.schedule(function()
     if err then
-    vim.notify("unemployment: " .. err, vim.log.levels.ERROR)
+    config.notify(err, vim.log.levels.ERROR)
     return
     end
 
     local sid = data.interpret_id or data.submission_id
     if not sid then
-    vim.notify("unemployment: Unexpected response", vim.log.levels.ERROR)
+    config.notify("Unexpected response", vim.log.levels.ERROR)
     return
     end
 
     poll(sid, client, function(result, poll_err)
     vim.schedule(function()
       if poll_err then
-      vim.notify("unemployment: " .. poll_err, vim.log.levels.ERROR)
+      config.notify(poll_err, vim.log.levels.ERROR)
       return
       end
       view.show_result(result)
@@ -181,7 +184,7 @@ end
 function solution.test(client)
   local info, err = problem_info()
   if not info then
-  vim.notify("unemployment: " .. err, vim.log.levels.ERROR)
+  config.notify(err, vim.log.levels.ERROR)
   return
   end
 
@@ -199,7 +202,7 @@ end
 function solution.submit(client, on_complete)
   local info, err = problem_info()
   if not info then
-  vim.notify("unemployment: " .. err, vim.log.levels.ERROR)
+  config.notify(err, vim.log.levels.ERROR)
   return
   end
 

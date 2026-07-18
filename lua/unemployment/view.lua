@@ -52,8 +52,11 @@ function view.show_result(data)
     msg = icon .. " " .. status
   end
 
-  local level = status == "Accepted" and vim.log.levels.INFO or vim.log.levels.WARN
-  vim.notify(msg, level)
+  if status == "Accepted" then
+    vim.api.nvim_echo({ { msg, "MoreMsg" } }, true, {})
+  else
+    vim.notify(msg, vim.log.levels.WARN)
+  end
 end
 
 return view

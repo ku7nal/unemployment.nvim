@@ -88,8 +88,12 @@ function M.setup(opts)
 
   local errs = validate(M.options)
   if #errs > 0 then
-    vim.notify("unemployment: Config warnings:\n" .. table.concat(errs, "\n"), vim.log.levels.WARN)
+    M.notify("Config warnings:\n" .. table.concat(errs, "\n"), vim.log.levels.WARN)
   end
+end
+
+function M.notify(msg, level)
+  vim.notify("󱌵 " .. msg, level or vim.log.levels.INFO)
 end
 
 return M

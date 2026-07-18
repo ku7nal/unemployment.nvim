@@ -16,7 +16,8 @@ local function load_cache()
   local ok, cache = pcall(vim.json.decode, table.concat(lines, "\n"))
   if not ok then return nil end
 
-  if os.time() - cache.fetched_at > config.options.search.cache_ttl then
+  local ttl = (config.options.search or {}).cache_ttl or 86400
+  if os.time() - cache.fetched_at > ttl then
     return nil
   end
 
@@ -52,7 +53,7 @@ local function open_or_fetch_problem(slug)
 
   if vim.fn.filereadable(filepath) == 1 then
     vim.cmd("edit " .. vim.fn.fnameescape(filepath))
-    vim.notify("unemployment: Opened '" .. slug .. "'", vim.log.levels.INFO)
+    config.notify("Opened '" .. slug .. "'", vim.log.levels.INFO)
   else
     local client = api.new(config.options)
     solution.open(slug, client)
@@ -62,9 +63,11 @@ end
 local function open_picker(fzf, problems)
   local solved = scan_solved()
   local items = {}
-  local slug_map = {}
+  local display_to_slug = {}
+  local slug_to_problem = {}
 
   for _, p in ipairs(problems) do
+    slug_to_problem[p.titleSlug] = p
     local prefix = p.isPaidOnly and "$ " or "  "
     local solved_mark = solved[p.titleSlug] and "✓" or " "
     local tags = ""
@@ -81,12 +84,12 @@ local function open_picker(fzf, problems)
     end
     local display = string.format("%s%s %s. %s [%s]%s",
       prefix, solved_mark, p.questionId, p.title, p.difficulty, tags)
-    slug_map[display] = p.titleSlug
+    display_to_slug[display] = p.titleSlug
     table.insert(items, display)
   end
 
   if #items == 0 then
-    vim.notify("unemployment: No problems found", vim.log.levels.WARN)
+    config.notify("No problems found", vim.log.levels.WARN)
     return
   end
 
@@ -98,18 +101,11 @@ local function open_picker(fzf, problems)
     actions = {
       ["default"] = function(selected)
         if not selected or #selected == 0 then return end
-        local display = selected[1]
-        local slug = slug_map[display]
+        local slug = display_to_slug[selected[1]]
         if not slug then return end
-        local problem = nil
-        for _, p in ipairs(problems) do
-          if p.titleSlug == slug then
-            problem = p
-            break
-          end
-        end
+        local problem = slug_to_problem[slug]
         if problem and problem.isPaidOnly then
-          vim.notify("unemployment: '" .. problem.title .. "' is a paid-only problem", vim.log.levels.WARN)
+          config.notify("'" .. problem.title .. "' is a paid-only problem", vim.log.levels.WARN)
           return
         end
         open_or_fetch_problem(slug)
@@ -119,9 +115,14 @@ local function open_picker(fzf, problems)
 end
 
 function M.search_problems()
+  if not config.initialized then
+    config.notify("Call setup() first: require('unemployment').setup({...})", vim.log.levels.ERROR)
+    return
+  end
+
   local ok, fzf = pcall(require, "fzf-lua")
   if not ok then
-    vim.notify("unemployment: fzf-lua is required for problem search. Install ibhagwan/fzf-lua.", vim.log.levels.ERROR)
+    config.notify("fzf-lua is required for problem search. Install ibhagwan/fzf-lua.", vim.log.levels.ERROR)
     return
   end
 
@@ -131,12 +132,12 @@ function M.search_problems()
     return
   end
 
-  vim.notify("unemployment: Fetching problem list...", vim.log.levels.INFO)
+  config.notify("Fetching problem list...", vim.log.levels.INFO)
   local client = api.new(config.options)
   client:problems_list(function(data, err)
     vim.schedule(function()
       if err then
-        vim.notify("unemployment: " .. err, vim.log.levels.ERROR)
+        config.notify(err, vim.log.levels.ERROR)
         return
       end
       save_cache(data)

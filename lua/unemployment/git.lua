@@ -44,7 +44,7 @@ function M.setup()
   vim.system({ "git", "-C", dir, "init" }, { text = true }, function(obj)
     vim.schedule(function()
       if obj.code ~= 0 then
-        vim.notify("unemployment: git init failed: " .. (obj.stderr or ""), vim.log.levels.ERROR)
+        config.notify("git init failed: " .. (obj.stderr or ""), vim.log.levels.ERROR)
         return
       end
 
@@ -53,7 +53,7 @@ function M.setup()
         vim.fn.writefile({ "a.out", "*.out", "*.dSYM/", "__pycache__/", ".DS_Store" }, gitignore)
       end
 
-      vim.notify("unemployment: Initialized git repo in " .. dir, vim.log.levels.INFO)
+      config.notify("Initialized git repo in " .. dir, vim.log.levels.INFO)
     end)
   end)
 
@@ -81,7 +81,7 @@ function M.commit(slug, result)
   local filepath = filepath_for_slug(slug)
 
   if vim.fn.filereadable(filepath) ~= 1 then
-    vim.notify("unemployment: File not found for commit: " .. filepath, vim.log.levels.WARN)
+    config.notify("File not found for commit: " .. filepath, vim.log.levels.WARN)
     return
   end
 
@@ -90,7 +90,7 @@ function M.commit(slug, result)
   vim.system({ "git", "-C", dir, "add", "--", filepath }, { text = true }, function(add_obj)
     if add_obj.code ~= 0 then
       vim.schedule(function()
-        vim.notify("unemployment: git add failed: " .. (add_obj.stderr or ""), vim.log.levels.ERROR)
+        config.notify("git add failed: " .. (add_obj.stderr or ""), vim.log.levels.ERROR)
       end)
       return
     end
@@ -101,7 +101,7 @@ function M.commit(slug, result)
       vim.system({ "git", "-C", dir, "commit", "-m", msg }, { text = true }, function(commit_obj)
         vim.schedule(function()
           if commit_obj.code ~= 0 then
-            vim.notify("unemployment: git commit failed: " .. (commit_obj.stderr or ""), vim.log.levels.ERROR)
+            config.notify("git commit failed: " .. (commit_obj.stderr or ""), vim.log.levels.ERROR)
           end
         end)
       end)
@@ -118,17 +118,17 @@ function M.log(slug)
   vim.system({ "git", "-C", dir, "log", "--oneline", "-10", "--", filepath }, { text = true }, function(obj)
     vim.schedule(function()
       if obj.code ~= 0 then
-        vim.notify("unemployment: git log failed: " .. (obj.stderr or ""), vim.log.levels.ERROR)
+        config.notify("git log failed: " .. (obj.stderr or ""), vim.log.levels.ERROR)
         return
       end
 
       local out = vim.trim(obj.stdout or "")
       if out == "" then
-        vim.notify("unemployment: No git history for '" .. slug .. "'", vim.log.levels.WARN)
+        config.notify("No git history for '" .. slug .. "'", vim.log.levels.WARN)
         return
       end
 
-      vim.notify("History for " .. slug .. ":\n" .. out, vim.log.levels.INFO)
+      config.notify("History for " .. slug .. ":\n" .. out, vim.log.levels.INFO)
     end)
   end)
 end

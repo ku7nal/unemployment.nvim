@@ -62,19 +62,19 @@ local function build_cmd(method, url, body, session_cookie, csrf_token, referer)
   local cmd = { "curl", "-s", "-X", method, "--max-time", "30" }
 
   for _, h in ipairs(static_headers) do
-  cmd[#cmd + 1] = "-H"
-  cmd[#cmd + 1] = h
+    table.insert(cmd, "-H")
+    table.insert(cmd, h)
   end
-  cmd[#cmd + 1] = "-H"
-  cmd[#cmd + 1] = "Cookie: LEETCODE_SESSION=" .. session_cookie .. "; csrftoken=" .. csrf_token
-  cmd[#cmd + 1] = "-H"
-  cmd[#cmd + 1] = "x-csrftoken: " .. csrf_token
-  cmd[#cmd + 1] = "-H"
-  cmd[#cmd + 1] = "Referer: " .. (referer or "https://leetcode.com/")
-  cmd[#cmd + 1] = url
+  table.insert(cmd, "-H")
+  table.insert(cmd, "Cookie: LEETCODE_SESSION=" .. session_cookie .. "; csrftoken=" .. csrf_token)
+  table.insert(cmd, "-H")
+  table.insert(cmd, "x-csrftoken: " .. csrf_token)
+  table.insert(cmd, "-H")
+  table.insert(cmd, "Referer: " .. (referer or "https://leetcode.com/"))
+  table.insert(cmd, url)
   if body then
-  cmd[#cmd + 1] = "--data-raw"
-  cmd[#cmd + 1] = body
+    table.insert(cmd, "--data-raw")
+    table.insert(cmd, body)
   end
   return cmd
 end
@@ -98,13 +98,13 @@ local function request(method, url, body, session_cookie, csrf_token, callback, 
     return
   end
 
-  local body = obj.stdout
-  if not body or body == "" then
+  local raw = obj.stdout
+  if not raw or raw == "" then
     callback(nil, "empty response from server")
     return
   end
 
-  local ok, data = pcall(vim.json.decode, body)
+  local ok, data = pcall(vim.json.decode, raw)
   if not ok then
     if body:find("<title>403 Forbidden</title>") then
     callback(nil, "403 Forbidden — session cookie may be expired")
@@ -186,8 +186,7 @@ function api:problems_list(callback)
       return
     end
 
-    local ok, _ = pcall(function() return data.data.problemsetQuestionList end)
-    if not ok or not data.data.problemsetQuestionList then
+    if not data.data or not data.data.problemsetQuestionList then
       callback(nil, "Unexpected response format from problem list query")
       return
     end

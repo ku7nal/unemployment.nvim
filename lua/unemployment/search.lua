@@ -97,6 +97,8 @@ local function open_picker(fzf, problems)
     prompt = "Problems> ",
     fzf_opts = {
       ["--exact"] = "",
+      ["--delimiter"] = " - ",
+      ["--nth"] = "1",
     },
     actions = {
       ["default"] = function(selected)

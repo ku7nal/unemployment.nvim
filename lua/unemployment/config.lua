@@ -93,7 +93,7 @@ function M.setup(opts)
 end
 
 function M.notify(msg, level)
-  vim.notify("󱌵" .. msg, level or vim.log.levels.INFO)
+  vim.notify("󱌵 " .. msg, level or vim.log.levels.INFO)
 end
 
 return M

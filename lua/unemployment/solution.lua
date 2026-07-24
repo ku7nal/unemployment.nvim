@@ -8,11 +8,13 @@ local function get_code()
   return table.concat(lines, "\n")
 end
 
-function solution.open(slug, client)
+function solution.open(slug, client, lang)
   local dir = config.options.solutions_dir
   vim.fn.mkdir(dir, "p")
 
   config.notify("Fetching problem '" .. slug .. "'...", vim.log.levels.INFO)
+
+  local lang_slug = lang or config.options.language
 
   client:question_data(slug, function(data, err)
   vim.schedule(function()
@@ -23,7 +25,6 @@ function solution.open(slug, client)
 
     local question = data.data.question
     local snippets = question.codeSnippets
-    local lang_slug = config.options.language
 
     local code = ""
     for _, s in ipairs(snippets) do
@@ -98,6 +99,79 @@ local function problem_info()
   end
 
   return { slug = slug, question_id = nil, test_case = nil, lang = lang }
+end
+
+function solution.switch_lang(client, lang)
+  local info, err = problem_info()
+  if not info then
+    config.notify(err, vim.log.levels.ERROR)
+    return
+  end
+
+  local slug = info.slug
+  local dir = config.options.solutions_dir
+
+  config.notify("Switching '" .. slug .. "' to " .. lang .. "...", vim.log.levels.INFO)
+
+  client:question_data(slug, function(data, err)
+    vim.schedule(function()
+      if err then
+        config.notify(err, vim.log.levels.ERROR)
+        return
+      end
+
+      local question = data.data.question
+      local snippets = question.codeSnippets
+
+      local code = ""
+      for _, s in ipairs(snippets) do
+        if s.langSlug == lang then
+          code = s.code
+          break
+        end
+      end
+
+      if code == "" then
+        config.notify("No template for '" .. lang .. "'", vim.log.levels.ERROR)
+        return
+      end
+
+      local ext = config.lang_to_ext[lang] or lang
+      local ft = config.lang_to_ft[lang] or lang
+      local filepath = dir .. "/" .. slug .. "." .. ext
+
+      local buf = vim.api.nvim_get_current_buf()
+      if not vim.api.nvim_buf_is_valid(buf) then
+        config.notify("No valid buffer", vim.log.levels.ERROR)
+        return
+      end
+
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(code, "\n", { plain = true }))
+      vim.api.nvim_buf_set_name(buf, filepath)
+      vim.bo[buf].filetype = ft
+      vim.bo[buf].buftype = "acwrite"
+      vim.bo[buf].modified = false
+
+      vim.b[buf].unemployment_lang = lang
+      vim.b[buf].unemployment_question_id = question.questionId
+      vim.b[buf].unemployment_test_case = question.sampleTestCase or ""
+
+      local existing = vim.api.nvim_get_autocmds({ buffer = buf, event = "BufWriteCmd" })
+      for _, au in ipairs(existing) do
+        pcall(vim.api.nvim_del_autocmd, au.id)
+      end
+
+      vim.api.nvim_create_autocmd("BufWriteCmd", {
+        buffer = buf,
+        callback = function()
+          vim.fn.writefile(vim.api.nvim_buf_get_lines(buf, 0, -1, true), filepath)
+          vim.bo[buf].modified = false
+        end,
+      })
+
+      config.notify("Switched to '" .. lang .. "'", vim.log.levels.INFO)
+    end)
+  end)
 end
 
 local function fetch_question(info, client, callback)

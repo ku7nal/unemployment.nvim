@@ -16,7 +16,9 @@ end
 
 local function on_submit_complete(result)
   local slug, _ = solution.current_slug()
-  if slug then git.commit(slug, result) end
+  local buf = vim.api.nvim_get_current_buf()
+  local lang = vim.api.nvim_buf_is_valid(buf) and vim.b[buf].unemployment_lang or nil
+  if slug then git.commit(slug, result, lang) end
 end
 
 function M.setup(opts)
@@ -32,8 +34,20 @@ function M.setup(opts)
 
   vim.api.nvim_create_user_command("DrySearch", function(args)
   if not require_setup() then return end
-  solution.open(args.args, client)
-  end, { nargs = 1, desc = "Fetch and open a LeetCode problem" })
+  local parts = vim.split(args.args, "%s+")
+  local slug = parts[1]
+  local lang = parts[2]
+  solution.open(slug, client, lang)
+  end, {
+  nargs = "+",
+  complete = function(ArgLead, CmdLine, CursorPos)
+    local before_cursor = CmdLine:sub(1, CursorPos)
+    local parts = vim.split(before_cursor, "%s+")
+    if #parts <= 2 then return {} end
+    return vim.tbl_filter(function(l) return l:find(ArgLead) ~= nil end, config.lang_slugs)
+  end,
+  desc = "Fetch and open a LeetCode problem. Usage: :DrySearch {slug} [lang]",
+  })
 
   vim.api.nvim_create_user_command("Dryrun", function()
   if not require_setup() then return end
@@ -49,6 +63,17 @@ function M.setup(opts)
   if not require_setup() then return end
   search.search_problems()
   end, { desc = "Search LeetCode problems with fzf-lua" })
+
+  vim.api.nvim_create_user_command("DryLang", function(args)
+  if not require_setup() then return end
+  solution.switch_lang(client, args.args)
+  end, {
+  nargs = 1,
+  complete = function(ArgLead)
+    return vim.tbl_filter(function(l) return l:find(ArgLead) ~= nil end, config.lang_slugs)
+  end,
+  desc = "Switch current buffer's programming language",
+  })
 
   local p = config.options.keys.leader
   vim.keymap.set("n", "<leader>" .. p .. "p", function()

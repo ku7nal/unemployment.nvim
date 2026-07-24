@@ -2,9 +2,9 @@ local config = require("unemployment.config")
 
 local M = {}
 
-local function filepath_for_slug(slug)
+local function filepath_for_slug(slug, lang)
   local dir = config.options.solutions_dir
-  local ext = config.lang_to_ext[config.options.language] or config.options.language
+  local ext = (lang and config.lang_to_ext[lang]) or config.lang_to_ext[config.options.language] or config.options.language
   return dir .. "/" .. slug .. "." .. ext
 end
 
@@ -70,7 +70,7 @@ function M.setup()
   end)
 end
 
-function M.commit(slug, result)
+function M.commit(slug, result, lang)
   if not config.options.git.enabled then return end
   if not result then return end
 
@@ -78,7 +78,7 @@ function M.commit(slug, result)
   if status ~= "accepted" then return end
 
   local dir = config.options.solutions_dir
-  local filepath = filepath_for_slug(slug)
+  local filepath = filepath_for_slug(slug, lang)
 
   if vim.fn.filereadable(filepath) ~= 1 then
     config.notify("File not found for commit: " .. filepath, vim.log.levels.WARN)

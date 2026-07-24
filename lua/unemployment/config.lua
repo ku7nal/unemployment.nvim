@@ -67,6 +67,9 @@ M.lang_to_ft = {
   elixir = "elixir",
 }
 
+M.lang_slugs = vim.tbl_keys(M.lang_to_ft)
+table.sort(M.lang_slugs)
+
 M.options = {}
 M.initialized = false
 

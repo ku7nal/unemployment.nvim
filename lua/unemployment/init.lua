@@ -75,6 +75,21 @@ function M.setup(opts)
   desc = "Switch current buffer's programming language",
   })
 
+  vim.api.nvim_create_user_command("DryDaily", function()
+  if not require_setup() then return end
+  solution.daily(client)
+  end, { desc = "Open today's daily challenge" })
+
+  vim.api.nvim_create_user_command("DryReset", function()
+  if not require_setup() then return end
+  solution.reset(client)
+  end, { desc = "Reset buffer to original template" })
+
+  vim.api.nvim_create_user_command("DryStats", function()
+  if not require_setup() then return end
+  solution.stats()
+  end, { desc = "Show solution statistics" })
+
   local p = config.options.keys.leader
   vim.keymap.set("n", "<leader>" .. p .. "p", function()
     if not require_setup() then return end

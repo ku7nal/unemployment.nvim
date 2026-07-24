@@ -129,6 +129,35 @@ local function request(method, url, body, session_cookie, csrf_token, callback, 
   end)
 end
 
+local DAILY_QUERY = [[
+query activeDailyCodingChallengeQuestion {
+  activeDailyCodingChallengeQuestion {
+    date
+    link
+    question {
+      acRate
+      difficulty
+      questionId
+      isPaidOnly
+      title
+      titleSlug
+      topicTags {
+        name
+        id
+        slug
+      }
+    }
+  }
+}
+]]
+
+function api:daily_challenge(callback)
+  local body = vim.json.encode({ query = DAILY_QUERY, variables = {} })
+  request("POST", self.base_url .. "/graphql", body,
+    self.session_cookie, self.csrf_token, callback,
+    "https://leetcode.com/")
+end
+
 function api:question_data(slug, callback)
   local body = vim.json.encode({ query = QUESTION_DATA_QUERY, variables = { titleSlug = slug } })
   request("POST", self.base_url .. "/graphql", body,

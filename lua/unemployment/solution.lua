@@ -297,4 +297,87 @@ function solution.current_slug()
   return info.slug
 end
 
+function solution.reset(client)
+  local info, err = problem_info()
+  if not info then
+    config.notify(err, vim.log.levels.ERROR)
+    return
+  end
+  solution.switch_lang(client, info.lang)
+end
+
+function solution.daily(client)
+  config.notify("Fetching daily challenge...", vim.log.levels.INFO)
+
+  client:daily_challenge(function(data, err)
+    vim.schedule(function()
+      if err then
+        config.notify(err, vim.log.levels.ERROR)
+        return
+      end
+
+      local daily = data.data.activeDailyCodingChallengeQuestion
+      local slug = daily.question.titleSlug
+      local title = daily.question.title
+      local difficulty = daily.question.difficulty
+
+      config.notify("Daily: " .. title .. " [" .. difficulty .. "]", vim.log.levels.INFO)
+      solution.open(slug, client)
+    end)
+  end)
+end
+
+function solution.stats()
+  local dir = config.options.solutions_dir
+  local ok, entries = pcall(vim.fn.readdir, dir)
+  if not ok then
+    config.notify("Cannot read solutions directory", vim.log.levels.ERROR)
+    return
+  end
+
+  local by_lang = {}
+  local slugs = {}
+  local git_count = 0
+
+  for _, entry in ipairs(entries) do
+    local ext = vim.fn.fnamemodify(entry, ":e")
+    local slug = vim.fn.fnamemodify(entry, ":r")
+    if ext and ext ~= "" and slug ~= "" and slug ~= ".gitignore" then
+      slugs[slug] = true
+      local lang = config.ext_to_lang[ext]
+      if lang then
+        by_lang[lang] = (by_lang[lang] or 0) + 1
+      end
+    end
+  end
+
+  local attempted = 0
+  for _ in pairs(slugs) do attempted = attempted + 1 end
+
+  if config.options.git.enabled then
+    local result = vim.system({ "git", "-C", dir, "log", "--oneline" }, { text = true }):wait()
+    if result.code == 0 then
+      local lines = vim.split(vim.trim(result.stdout or ""), "\n")
+      git_count = #lines
+      if lines[1] == "" then git_count = 0 end
+    end
+  end
+
+  local parts = { "Attempted: " .. attempted }
+  if git_count > 0 then
+    table.insert(parts, "Accepted: " .. git_count)
+  end
+
+  local langs = {}
+  for lang, count in pairs(by_lang) do
+    table.insert(langs, lang .. ": " .. count)
+  end
+  table.sort(langs)
+  if #langs > 0 then
+    table.insert(parts, table.concat(langs, " | "))
+  end
+
+  config.notify(table.concat(parts, "  "), vim.log.levels.INFO)
+end
+
 return solution
